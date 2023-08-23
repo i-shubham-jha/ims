@@ -6,6 +6,8 @@
 
 struct Node
 {
+    Node *left, *right, *parent;
+    int height;
     unsigned int roll;
     std::string name;
     std::string fatherName;
