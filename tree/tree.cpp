@@ -96,7 +96,8 @@ Node * Tree::createNewNode(int & roll, std::string & name, std::string & fatherN
 }
 
 
-
+// function to insert as in a normal BST
+// returns address of newly created nodes
 Node * Tree::insertBST(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
 {
     Node * newNode = createNewNode(roll, name, fatherName, motherName, phone, email, address);
@@ -233,4 +234,42 @@ void Tree::rightRotate(Node * x)
     // updating the heights
     updateHeight(x);
     updateHeight(y);
+}
+
+// function to rebalance
+void Tree::rebalance(Node * x)
+{
+    while(x)
+    {
+        updateHeight(x); // just to be sure
+
+        if( height(x->left) >= 2 + height(x->right) )
+        {
+            // x is left heavy and NOT following AVL property
+
+            if( height(x->left->left) >= height(x->left->right) ) // x's LC is left heavy or balanced
+            {
+                rightRotate(x);
+            }
+            else // x's LC is right heavy
+            {
+                leftRotate(x->left);
+                rightRotate(x);
+            }
+        }
+        else if( height(x->right) >= 2 + height(x->left) )
+        {
+            // x is right heavy and NOT following AVL property
+
+            if( height(x->right->right) >= height(x->right->left) ) // x's RC is right heavy or balanced
+            {
+                leftRotate(x);
+            }
+            else // x's RC is left heavy
+            {
+                rightRotate(x->right);
+                leftRotate(x);
+            }
+        }
+    }
 }

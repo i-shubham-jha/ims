@@ -31,6 +31,9 @@ class Tree
 
     // function to right rotate the tree rooted at x
     void rightRotate(Node * x);
+
+    // function to balance the nodes from x upwards
+    void rebalance(Node * x);
 public:
 
     // default constructor
