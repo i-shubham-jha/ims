@@ -21,10 +21,7 @@ class Tree
     // return pointer to the newly inserted node
     Node * insertBST(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
 
-    // function to search the node with the given roll
-    // returns the pointer to that node, NULL means no such node found
-    // search just like in a BST
-    Node * search(int & roll);
+
 
     // function to left rotate the tree rooted at x
     void leftRotate(Node * x);
@@ -34,6 +31,9 @@ class Tree
 
     // function to balance the nodes from x upwards
     void rebalance(Node * x);
+
+    // inorder traversal function: helper for getRecords
+    void inorder(Node * root, std::vector<Node> & result);
 public:
 
     // default constructor
@@ -50,11 +50,20 @@ public:
 
     // function to search the record
     // if not found, then returns a node struct with roll set to -1
+    // DON'T USE THIS CURRENTLY, use below search function to get the address directly, or NULL if roll DNE
     Node searchRecord(int & roll);
 
+    // function to search the node with the given roll
+    // returns the pointer to that node, NULL means no such node found
+    // search just like in a BST
+    Node * search(int & roll);
+
     // function to update a record with given roll no
+    // send the entire data, even if some field not even updated
+    // roll no can't be updated; here just for searching the node
     void updateRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
 
     // function to get all the records as a vector
+    // returns in increasing order of roll number
     std::vector<Node> getRecords();
 };

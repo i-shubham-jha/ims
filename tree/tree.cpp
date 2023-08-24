@@ -21,7 +21,10 @@ Tree::Tree(Node * root)
 
 void Tree::addRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
 {
+    Node * newNode = insertBST(roll, name, fatherName, motherName, phone, email, address);
 
+    // balance factor may be off, so need to balance from this node upwards
+    rebalance(newNode);
 }
 
 
@@ -46,14 +49,44 @@ Node Tree::searchRecord(int & roll)
 
 void Tree::updateRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
 {
+    // assuming that this function will only be called when this roll already exists
+    // this can be checked using the search function first
 
+    Node * temp = search(roll);
+
+    // roll NO cant be updated
+    if(temp->name != name) temp->name = name;
+    if(temp->fatherName != fatherName) temp->fatherName = fatherName;
+    if(temp->motherName != motherName) temp->motherName = motherName;
+    if(temp->phone != phone) temp->phone = phone;
+    if(temp->email != email) temp->email = email;
+    if(temp->address != address) temp->address = address;
 }
 
 
-std::vector<Node> getRecords()
+std::vector<Node> Tree::getRecords()
 {
-
+    std::vector<Node> result;
+    inorder(this->root, result);
+    return result;
 }
+
+
+
+Node * Tree::search(int & roll) // search just as in BST
+{
+    Node * temp = root;
+
+    while(temp)
+    {
+        if(roll == temp->roll) break;
+        else if(roll < temp->roll) temp = temp->left;
+        else temp = temp->right;
+    }
+
+    return temp;
+}
+
 
 /************PRIVATE FUNCTIONS*******/
 
@@ -70,6 +103,19 @@ void Tree::updateHeight(Node * x)
     if(x)
     {
         x->height = std::max(height(x->left), height(x->right)) + 1; //agar children nahi hai then max gives -1 ==> 0 height of this node
+    }
+}
+
+
+// inorder traversal: helper function for getRecords
+void Tree::inorder(Node * root, std::vector<Node> & result)
+{
+    // here root is more local than this->root, so that we will be used
+    if(!root)
+    {
+        inorder(root->left, result);
+        result.push_back(*root);
+        inorder(root->right, result);
     }
 }
 
@@ -140,20 +186,6 @@ Node * Tree::insertBST(int & roll, std::string & name, std::string & fatherName,
 }
 
 
-
-Node * Tree::search(int & roll) // search just as in BST
-{
-    Node * temp = root;
-
-    while(temp)
-    {
-        if(roll == temp->roll) break;
-        else if(roll < temp->roll) temp = temp->left;
-        else temp = temp->right;
-    }
-
-    return temp;
-}
 
 
 void Tree::leftRotate(Node * x)
@@ -273,3 +305,5 @@ void Tree::rebalance(Node * x)
         }
     }
 }
+
+
