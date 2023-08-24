@@ -140,7 +140,7 @@ Node * Tree::insertBST(int & roll, std::string & name, std::string & fatherName,
 
 
 
-Node * Tree::search(int & roll)
+Node * Tree::search(int & roll) // search just as in BST
 {
     Node * temp = root;
 
@@ -155,4 +155,82 @@ Node * Tree::search(int & roll)
 }
 
 
+void Tree::leftRotate(Node * x)
+{
+    Node * y = x->right;
 
+    // adjusting root of this new subtree
+    y->parent = x->parent; // y is the new root of this subtree
+    if(!y->parent) // if x was the root, the new root becomes y
+    {
+        this->root = y;
+    }
+    else // the parent of x exists
+    {
+        // need to check ki x was the LC or RC of its parent
+        if(x == y->parent->left) // x was LC
+        {
+            y->parent->left = y; // make y as the new LC
+        }
+        else // x == y->parent->right, x was RC
+        {
+            y->parent->right = y; // make y as new RC
+        }
+    }
+
+    // need to move y ka LC to x ka RC
+    x->right = y->left;
+    if(y->left) // LC of y exists
+    {
+        y->left->parent = x; // its new parent is x
+    }
+
+    // establishing final connections between x and y
+    y->left = x; // x now becoms LC of y
+    x->parent = y;
+
+    //need to update the heights of x and y
+    updateHeight(x);
+    updateHeight(y);
+}
+
+
+// function to rotate right
+void Tree::rightRotate(Node * x)
+{
+    Node * y = x->left;
+
+    // making x's parent the parent of y
+    y->parent = x->parent;
+
+    if(!y->parent) // if x was root, now y becomes the root
+    {
+        this->root = y;
+    }
+    else // x was NOT the root
+    {
+        if(x == x->parent->left) // x was LC, so should y be
+        {
+            y->parent->left = y;
+        }
+        else // x == x->parent->right, x was RC, so should y be
+        {
+            y->parent->right = y;
+        }
+    }
+
+    // making y's RC as x's LC
+    x->left = y->right;
+    if(x->left) // if LC exists
+    {
+        x->left->parent = x;
+    }
+
+    // making final connections between x and y
+    x->parent = y;
+    y->right = x;
+
+    // updating the heights
+    updateHeight(x);
+    updateHeight(y);
+}

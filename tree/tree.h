@@ -25,6 +25,12 @@ class Tree
     // returns the pointer to that node, NULL means no such node found
     // search just like in a BST
     Node * search(int & roll);
+
+    // function to left rotate the tree rooted at x
+    void leftRotate(Node * x);
+
+    // function to right rotate the tree rooted at x
+    void rightRotate(Node * x);
 public:
 
     // default constructor
