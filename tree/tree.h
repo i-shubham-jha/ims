@@ -34,6 +34,14 @@ class Tree
 
     // inorder traversal function: helper for getRecords
     void inorder(Node * root, std::vector<Node> & result);
+
+    // function to delete node x as in a BST
+    // returns address of parent of ACTUALLY PHYSICALLY DELETED NODE deleted node
+    // this parent is the first potentially out of balance node
+    // heights change only from root to the parent of the physically deleted node
+    // returns address of the physically deleted node
+    // does NOT free() the node x, do it later in removeRecord
+    Node * deleteBST(Node * x);
 public:
 
     // default constructor
@@ -43,25 +51,25 @@ public:
     Tree(Node * root);
 
     // function to add a new record
-    void addRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
+    void addRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address);
 
     // function to remove the record with the given roll no
-    void removeRecord(int & roll);
+    void removeRecord(int roll);
 
     // function to search the record
     // if not found, then returns a node struct with roll set to -1
     // DON'T USE THIS CURRENTLY, use below search function to get the address directly, or NULL if roll DNE
-    Node searchRecord(int & roll);
+    Node searchRecord(int roll);
 
     // function to search the node with the given roll
     // returns the pointer to that node, NULL means no such node found
     // search just like in a BST
-    Node * search(int & roll);
+    Node * search(int roll);
 
     // function to update a record with given roll no
     // send the entire data, even if some field not even updated
     // roll no can't be updated; here just for searching the node
-    void updateRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
+    void updateRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address);
 
     // function to get all the records as a vector
     // returns in increasing order of roll number

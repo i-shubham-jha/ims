@@ -19,7 +19,7 @@ Tree::Tree(Node * root)
 
 
 
-void Tree::addRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
+void Tree::addRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address)
 {
     Node * newNode = insertBST(roll, name, fatherName, motherName, phone, email, address);
 
@@ -28,13 +28,22 @@ void Tree::addRecord(int & roll, std::string & name, std::string & fatherName, s
 }
 
 
-void Tree::removeRecord(int & roll)
+void Tree::removeRecord(int roll)
 {
+    Node * x = search(roll);
 
+    if(x) // this record exists
+    {
+        x = deleteBST(x);
+        // x contains address of physically to be deleted node, not yet deleted though
+        rebalance(x->parent);
+
+        free(x);
+    }
 }
 
 
-Node Tree::searchRecord(int & roll)
+Node Tree::searchRecord(int roll)
 {
     Node * temp = search(roll);
 
@@ -47,7 +56,7 @@ Node Tree::searchRecord(int & roll)
 }
 
 
-void Tree::updateRecord(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
+void Tree::updateRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address)
 {
     // assuming that this function will only be called when this roll already exists
     // this can be checked using the search function first
@@ -73,7 +82,7 @@ std::vector<Node> Tree::getRecords()
 
 
 
-Node * Tree::search(int & roll) // search just as in BST
+Node * Tree::search(int roll) // search just as in BST
 {
     Node * temp = root;
 
@@ -111,7 +120,7 @@ void Tree::updateHeight(Node * x)
 void Tree::inorder(Node * root, std::vector<Node> & result)
 {
     // here root is more local than this->root, so that we will be used
-    if(!root)
+    if(root)
     {
         inorder(root->left, result);
         result.push_back(*root);
@@ -303,7 +312,58 @@ void Tree::rebalance(Node * x)
                 leftRotate(x);
             }
         }
+
+        x = x->parent;
     }
 }
 
 
+// delete as in BST
+// but return x's parent's pointer
+Node * Tree::deleteBST(Node * x)
+{
+    Node * parent = x->parent;
+
+    if(!x->left && !x->right) // no children of x
+    {
+        // need to make parent's children NULL
+        if(x == parent->left) parent->left = NULL; // x was LC
+        else parent->right = NULL; // x was RC
+        return x;
+    }
+    else if(!x->left) // right child exists only
+    {
+        // child pointing to new parent
+        x->right->parent = parent;
+
+        // parent pointing to new child
+        if(x == parent->left) parent->left = x->right;
+        else parent->right = x->right;
+
+        return x;
+    }
+    else if(!x->right) // left child exists only
+    {
+        // child pointing to new parent
+        x->left->parent = parent;
+
+        // parent pointing to new child
+        if(x == parent->left) parent->left = x->left;
+        else parent->right = x->left;
+
+        return x;
+    }
+    else // both child exist
+    {
+        // replace with successor, then delete the successor
+        // as both children exist successor is in RST
+
+        Node * temp = x->right;
+
+        while(temp->left) temp = temp->left;
+
+        *x = *temp; // copy data of temp to x; overwrites here, no problem
+
+        return deleteBST(temp); // as we need to return the address of the physically deleted node, which is now the earlier successor node
+    }
+}
