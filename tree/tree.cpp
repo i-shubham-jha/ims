@@ -11,7 +11,7 @@ Tree::Tree()
 
 
 // parametrised constructor
-Tree::Tree(Node * root)
+void Tree::loadRetrievedTree(Node * root)
 {
     this->root = root;
 }

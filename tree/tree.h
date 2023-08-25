@@ -47,8 +47,8 @@ public:
     // default constructor
     Tree();
 
-    // paremeterised constructor: use to init with already saved tree retriever using tree-saver
-    Tree(Node * root);
+    // use to init with already saved tree retriever using tree-saver
+    void loadRetrievedTree(Node * root);
 
     // function to add a new record
     void addRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address);
