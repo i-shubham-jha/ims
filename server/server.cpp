@@ -1,5 +1,5 @@
 #include "server.h"
-#include <sys/socket.h>
+
 
 // logging function
 void imsServer::log(std::string const & str)
@@ -139,9 +139,91 @@ void imsServer::startServer()
     }
 }
 
+// function to extract roll from body
+unsigned int imsServer::extractRoll(char * buffer, int size)
+{
+    // data in body is like:
+    // {"roll":"21149"}
+    int i = 0;
+    while(i < size && buffer[i] != '{') i++;
+
+    // reached the bracket before "roll"
+    i += 9; // now we have reached the first digit of roll
+    std::string roll;
+
+    // we don't know the length of roll so just read till " encountered
+    while(buffer[i] != '"') roll += buffer[i++];
+
+    return std::stoul(roll);
+}
 
 
+// function to handle search for a roll GET
+void imsServer::handleGET(int sock)
+{
+    // first need to read everything into a buff
+    // first need to parse the roll out of the body
+    // then search for it in critical section
+    char buffer[4096] = {0};
+    read(sock,buffer, sizeof(buffer));
+
+    // all data is in buffer
+    unsigned int roll = extractRoll(buffer, 4096);
+
+    Node * node = tree.search(roll);
+
+}
 
 
+// function to handle adding a new record: POST
+void imsServer::handlePOST(int sock)
+{
 
+}
+
+
+// function to handle updating an existing record
+void imsServer::handlePUT(int sock)
+{
+
+}
+
+// functino to handle deleting a record: DELETE
+void imsServer::handleDELETE(int sock)
+{
+    // first gett all the body data
+    char buffer[4096] = {0};
+    read(sock,buffer, sizeof(buffer));
+
+    // get the roll number to be deleted
+    unsigned int roll = extractRoll(buffer, 4096);
+
+    Node * node = tree.search(roll);
+
+    std::ostringstream response; // the response which will be sent
+
+    if(!node) // not found the roll
+    {
+        std::string body("{\"message\":\"Roll number does NOT exist\"}");
+        response << "HTTP/1.1 404 Not Found\nContent-Type: application/json\nContent-Length: " << body.size() << "\n\n" << body;
+    }
+    else // if roll exists
+    {
+        tree.removeRecord(roll);
+
+        std::ostringstream body;
+
+        // this body is the HTTP response body
+
+        body << "{\"message\":\"Roll number "<< roll << " deleted\"}";
+
+        // response starts with the header, where each attrib should be on a separate line
+        // then comes a blank line between the header and the body
+        // then comes the body, size of which should be mentioned in the header
+        response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
+    }
+
+    // sending back the response
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+}
 
