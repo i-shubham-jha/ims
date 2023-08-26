@@ -15,11 +15,11 @@ class Tree
     void updateHeight(Node * x);
 
     // functino to create a new node with given data
-    Node * createNewNode(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
+    Node * createNewNode(unsigned int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
 
     // function to insert as in a normal BST
     // return pointer to the newly inserted node
-    Node * insertBST(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
+    Node * insertBST(unsigned int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address);
 
 
 
@@ -51,25 +51,25 @@ public:
     void loadRetrievedTree(Node * root);
 
     // function to add a new record
-    void addRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address);
+    void addRecord(Node & node);
 
     // function to remove the record with the given roll no
-    void removeRecord(int roll);
+    void removeRecord(unsigned int roll);
 
     // function to search the record
     // if not found, then returns a node struct with roll set to -1
     // DON'T USE THIS CURRENTLY, use below search function to get the address directly, or NULL if roll DNE
-    Node searchRecord(int roll);
+    Node searchRecord(unsigned int roll);
 
     // function to search the node with the given roll
     // returns the pointer to that node, NULL means no such node found
     // search just like in a BST
-    Node * search(int roll);
+    Node * search(unsigned int roll);
 
     // function to update a record with given roll no
     // send the entire data, even if some field not even updated
     // roll no can't be updated; here just for searching the node
-    void updateRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address);
+    void updateRecord(Node & node);
 
     // function to get all the records as a vector
     // returns in increasing order of roll number

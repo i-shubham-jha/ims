@@ -19,16 +19,16 @@ void Tree::loadRetrievedTree(Node * root)
 
 
 
-void Tree::addRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address)
+void Tree::addRecord(Node & node)
 {
-    Node * newNode = insertBST(roll, name, fatherName, motherName, phone, email, address);
+    Node * newNode = insertBST(node.roll, node.name, node.fatherName, node.motherName, node.phone, node.email, node.address);
 
     // balance factor may be off, so need to balance from this node upwards
     rebalance(newNode);
 }
 
 
-void Tree::removeRecord(int roll)
+void Tree::removeRecord(unsigned int roll)
 {
     Node * x = search(roll);
 
@@ -43,7 +43,7 @@ void Tree::removeRecord(int roll)
 }
 
 
-Node Tree::searchRecord(int roll)
+Node Tree::searchRecord(unsigned int roll)
 {
     Node * temp = search(roll);
 
@@ -56,20 +56,20 @@ Node Tree::searchRecord(int roll)
 }
 
 
-void Tree::updateRecord(int roll, std::string name, std::string fatherName, std::string motherName, unsigned long int phone, std::string email, std::string address)
+void Tree::updateRecord(Node & node)
 {
     // assuming that this function will only be called when this roll already exists
     // this can be checked using the search function first
 
-    Node * temp = search(roll);
+    Node * temp = search(node.roll);
 
     // roll NO cant be updated
-    if(temp->name != name) temp->name = name;
-    if(temp->fatherName != fatherName) temp->fatherName = fatherName;
-    if(temp->motherName != motherName) temp->motherName = motherName;
-    if(temp->phone != phone) temp->phone = phone;
-    if(temp->email != email) temp->email = email;
-    if(temp->address != address) temp->address = address;
+    if(temp->name != node.name) temp->name = node.name;
+    if(temp->fatherName != node.fatherName) temp->fatherName = node.fatherName;
+    if(temp->motherName != node.motherName) temp->motherName = node.motherName;
+    if(temp->phone != node.phone) temp->phone = node.phone;
+    if(temp->email != node.email) temp->email = node.email;
+    if(temp->address != node.address) temp->address = node.address;
 }
 
 
@@ -82,7 +82,7 @@ std::vector<Node> Tree::getRecords()
 
 
 
-Node * Tree::search(int roll) // search just as in BST
+Node * Tree::search(unsigned int roll) // search just as in BST
 {
     Node * temp = root;
 
@@ -129,7 +129,7 @@ void Tree::inorder(Node * root, std::vector<Node> & result)
 }
 
 
-Node * Tree::createNewNode(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
+Node * Tree::createNewNode(unsigned int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
 {
     Node * newNode = new Node;
 
@@ -153,7 +153,7 @@ Node * Tree::createNewNode(int & roll, std::string & name, std::string & fatherN
 
 // function to insert as in a normal BST
 // returns address of newly created nodes
-Node * Tree::insertBST(int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
+Node * Tree::insertBST(unsigned int & roll, std::string & name, std::string & fatherName, std::string & motherName, unsigned long int & phone, std::string & email, std::string & address)
 {
     Node * newNode = createNewNode(roll, name, fatherName, motherName, phone, email, address);
 
