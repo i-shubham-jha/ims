@@ -62,6 +62,22 @@ imsServer::imsServer(std::string const & IP, short & port)
 }
 
 
+// function to get the method from HTTP connection
+std::string imsServer::getMethod(int sock)
+{
+    std::string method;
+    char buff[2] = {0};
+
+    read(sock, buff, 1);
+
+    while(buff[0] != ' ')
+    {
+        method += buff[0];
+        read(sock, buff, 1);
+    }
+    return method;
+}
+
 // function to actually start listening and responding
 void imsServer::startServer()
 {
@@ -86,6 +102,40 @@ void imsServer::startServer()
         // if second and third params are NULL, then the caller's address are Not stored anywhere
         // allocates and returns a new socket with the same type as socketFD
         int newSocket = accept(socketFD, NULL, NULL);
+
+        std::string method = getMethod(newSocket); // getting the method associated
+
+
+        // the functions to be called below need to first parse the request
+        // sent by the client, so that tree functions could be called with
+        // appropriate params
+        // Parsing the data is NOT part of critical section
+        // tree is the shared resource, so accessing its functions are CS
+        //
+        if(method == "GET") // search record; reader
+        {
+            std::thread threadObj(&imsServer::handleGET, this, newSocket);
+            threadObj.detach();
+        }
+        else if(method == "PUT") // update record; writer
+        {
+            std::thread threadObj(&imsServer::handlePUT, this, newSocket);
+            threadObj.detach();
+        }
+        else if(method == "POST") // add new record; writer
+        {
+            std::thread threadObj(&imsServer::handlePOST, this, newSocket);
+            threadObj.detach();
+        }
+        else if(method == "DELETE") // delete record; writer
+        {
+            std::thread threadObj(&imsServer::handleDELETE, this, newSocket);
+            threadObj.detach();
+        }
+        else // other shit
+        {
+
+        }
     }
 }
 
