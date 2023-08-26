@@ -7,6 +7,9 @@ void imsServer::log(std::string const & str)
     std::cout << str << std::endl;
 }
 
+
+/*********************************GENERAL SERVER/SOCKET PART***********************/
+
 // init sockaddr_in struct
 // create socket and bind it to the address provided
 // retrieve the tree if stored on HDD
@@ -68,12 +71,14 @@ std::string imsServer::getMethod(int sock)
     std::string method;
     char buff[2] = {0};
 
-    read(sock, buff, 1);
+    // recv with fourth arg = 0 has similar functionality to read
+    // TBD: investigate: read is giving problems when including <mutex> or <pthread.h>
+    recv(sock, buff, 1, 0);
 
     while(buff[0] != ' ')
     {
         method += buff[0];
-        read(sock, buff, 1);
+        recv(sock, buff, 1, 0);
     }
     return method;
 }
@@ -139,6 +144,43 @@ void imsServer::startServer()
     }
 }
 
+/**************************GENERAL SOCKET/SERVER ENDS*******************/
+
+
+
+//************************READER/WRITER PROBLEM v3**********************/
+
+/*******************************
+
+general templates for:
+
+writer
+{
+    wait(order)
+    wait(wrt)
+    signal(order)
+    // write
+    signal(wrt)
+}
+
+reader
+{
+    wait(order)
+    wait(mutex) // to protect readcount
+    readcount++
+    if(readcount == 1) wait(wrt); // first reader, block all the writers
+    signal (order);
+    signal(mutex); // so that other readers may join in
+    // read
+    wait(mutex);
+    readcount--;
+    if(readcount == 0) signal(wrt); // last reader, allow the writer to come in
+    signal(mutex);
+
+}
+
+*****************************/
+
 // function to extract roll from body
 unsigned int imsServer::extractRoll(char * buffer, int size)
 {
@@ -157,6 +199,12 @@ unsigned int imsServer::extractRoll(char * buffer, int size)
     return std::stoul(roll);
 }
 
+// function to extract all the data from the body and return it as a node
+Node imsServer::extractData(char * buff, int size)
+{
+
+}
+
 
 // function to handle search for a roll GET
 void imsServer::handleGET(int sock)
@@ -165,7 +213,7 @@ void imsServer::handleGET(int sock)
     // first need to parse the roll out of the body
     // then search for it in critical section
     char buffer[4096] = {0};
-    read(sock,buffer, sizeof(buffer));
+    recv(sock,buffer, sizeof(buffer), 0);
 
     // all data is in buffer
     unsigned int roll = extractRoll(buffer, 4096);
@@ -178,14 +226,63 @@ void imsServer::handleGET(int sock)
 // function to handle adding a new record: POST
 void imsServer::handlePOST(int sock)
 {
+    // reading all data first
+    char buffer[4096] = {0};
+    recv(sock, buffer, sizeof(buffer), 0);
 
+    Node newNode = extractData(buffer, 4096);
+
+    // CS starts, accessing tree
+    // this is writer
+    order.lock();
+    wrt.lock();
+    order.unlock(); // as we got the x-lock on resource: matlab resource hi mil gaya hai
+
+    tree.addRecord(newNode); // accessing the shared resource
+
+    wrt.unlock(); // common resource ka use ho gaya hai, ab non-CS kaam karna hai karna hai
+
+    std::ostringstream body, response;
+
+    body << "{\"message\":\"Roll number "<< newNode.roll << " added succesfully\"}";
+
+    response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
+
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+
+    close(sock);
 }
 
 
 // function to handle updating an existing record
 void imsServer::handlePUT(int sock)
 {
+    // call this only when this roll exists
 
+    // reading all data first
+    char buffer[4096] = {0};
+    recv(sock, buffer, sizeof(buffer), 0);
+
+    Node node = extractData(buffer, 4096);
+
+    // CS begins
+    order.lock();
+    wrt.lock();
+    order.unlock();
+
+    this->tree.updateRecord(node);
+
+    wrt.unlock();
+
+    std::ostringstream body, response;
+
+    body << "{\"message\":\"Roll number "<< node.roll << " updated succesfully\"}";
+
+    response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
+
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+
+    close(sock);
 }
 
 // functino to handle deleting a record: DELETE
@@ -193,23 +290,32 @@ void imsServer::handleDELETE(int sock)
 {
     // first gett all the body data
     char buffer[4096] = {0};
-    read(sock,buffer, sizeof(buffer));
+    recv(sock,buffer, sizeof(buffer), 0);
 
     // get the roll number to be deleted
     unsigned int roll = extractRoll(buffer, 4096);
 
+    std::ostringstream response; // the response which will be sent
+
+    // CS starts
+    order.lock(); // to fix starvation problem in v3
+    wrt.lock(); // we got exclusive lock on the tree
+    order.unlock(); // so now we have been served and now can release the
+
     Node * node = tree.search(roll);
 
-    std::ostringstream response; // the response which will be sent
 
     if(!node) // not found the roll
     {
+        wrt.unlock(); // hamara shared resource tree se kaam ho gaya
         std::string body("{\"message\":\"Roll number does NOT exist\"}");
         response << "HTTP/1.1 404 Not Found\nContent-Type: application/json\nContent-Length: " << body.size() << "\n\n" << body;
     }
     else // if roll exists
     {
         tree.removeRecord(roll);
+        wrt.unlock(); // hamara shared resource tree se kaam ho gaya, need to release the lock ASAP to increase performance
+
 
         std::ostringstream body;
 
@@ -222,8 +328,13 @@ void imsServer::handleDELETE(int sock)
         // then comes the body, size of which should be mentioned in the header
         response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
     }
+    // CS ended already in if..else
 
     // sending back the response
     if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+
+    close(sock);
 }
 
+
+/*****************************READER/WRITER ENDS********************/

@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <sstream>
 #include <thread>
-#include <pthread.h>
+#include <mutex>
 #include <cstdio>
 
 
@@ -70,10 +70,10 @@ class imsServer
 
 
     // semaphores and other vars needed for reader writer problem v3
-    ; // for exlusive access to writer threads
-    ; // to control access to shared var readercount
-    int readercount; // number of current readers reading the resource
-    ; // to fix starvation as in v3 of reader writer problem
+    std::mutex wrt; // for exlusive access to writer threads
+    std::mutex read; // to control access to shared var readercount
+    int readcount; // number of current readers reading the resource
+    std::mutex order; // to fix starvation as in v3 of reader writer problem
 
 public:
     // to init the sAddr struct and retrieve the tree saved onto HDD (if any)
