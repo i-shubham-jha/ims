@@ -11,7 +11,7 @@
 #include <sstream>
 #include <thread>
 #include <mutex>
-#include <cstdio>
+#include <string.h>
 
 
 /********************INTERFACE SPECIFICATION********************
@@ -68,6 +68,8 @@ class imsServer
     unsigned int extractRoll(char * buff, int size); // required in search and delete ops
     Node extractData(char * buff, int size); // required in update and add ops
 
+    // utility function to jsonify a given node's data
+    std::ostringstream JSONify(Node & node);
 
     // semaphores and other vars needed for reader writer problem v3
     std::mutex wrt; // for exlusive access to writer threads
@@ -80,4 +82,7 @@ public:
     imsServer(std::string const & IP, short & port);
 
     void startServer(); // server starts listening and responding
+
+    // destructor
+    ~imsServer();
 };

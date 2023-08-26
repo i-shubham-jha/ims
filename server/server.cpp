@@ -1,11 +1,114 @@
 #include "server.h"
+#include <cstdlib>
+#include <string>
 
+/*******************************UTILITY FUNCTIONS*****************/
 
 // logging function
 void imsServer::log(std::string const & str)
 {
     std::cout << str << std::endl;
 }
+
+// function to extract roll from body
+unsigned int imsServer::extractRoll(char * buffer, int size)
+{
+    // data in body is like:
+    // {"roll":"21149"}
+    int i = 0;
+    while(i < size && buffer[i] != '{') i++;
+
+    // reached the bracket before "roll"
+    i += 9; // now we have reached the first digit of roll
+    std::string roll;
+
+    // we don't know the length of roll so just read till " encountered
+    while(buffer[i] != '"') roll += buffer[i++];
+
+    return std::stoul(roll);
+}
+
+// function to extract all the data from the body and return it as a node
+Node imsServer::extractData(char * buff, int size)
+{
+    // sample data to be parsed (lot of shit in header also there, following is just the body)
+    // {"roll":"100","name":"baap","fatherName":"Papa ka naam","motherName":"Mata ka naam","phone":"100","email":"x@t.co","address":"White House, Patna"}
+
+    // in the following approach we are just traversing the buffer
+    // IF SPACE AFTER COMMAS IN REQUEST BODY, then make appropriate changes to index increments
+
+    std::string str;
+    Node node;
+
+    int i = 0;
+    while(i < size && buff[i] != '{') i++; // tryna reach the opening brace of json body
+
+    // roll
+    i += 9; // reached first digit of roll
+    while(buff[i] != '"') str += buff[i++];
+    node.roll = std::stoul(str);
+
+    // name
+    i += 10;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.name = str;
+
+    // fatherName
+    i += 16;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.fatherName = str;
+
+    // motherName
+    i += 16;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.motherName = str;
+
+    // phone
+    i += 11;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.phone = std::stoul(str);
+
+    // email
+    i += 11;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.email = str;
+
+    // address
+    i += 13;
+    str.clear();
+    while(buff[i] != '"') str += buff[i++];
+    node.address = str;
+
+    return node;
+}
+
+// function to jsonify a given node's data
+std::ostringstream imsServer::JSONify(Node & node)
+{
+    // make as:
+    // {"firstName":"shubham","lastName":"jha","phone":"9874563210","email":"21149@iiitu.ac.in"}
+    std::ostringstream str;
+
+    str << "{\"roll\":\"" << node.roll
+        << "\",\"name\":\"" << node.name
+        << "\",\"fatherName\":\"" << node.fatherName
+        << "\",\"motherName\":\"" << node.motherName
+        << "\",\"phone\":\"" << node.phone
+        << "\",\"email\":\"" << node.email
+        << "\",\"address\":\"" << node.address
+        << "\"}";
+
+    return str;
+}
+
+/*****************************UTIL FUNCS ENDS********************/
+
+
 
 
 /*********************************GENERAL SERVER/SOCKET PART***********************/
@@ -144,6 +247,13 @@ void imsServer::startServer()
     }
 }
 
+// destructor
+// save the tree on hdd using tree-saver
+imsServer::~imsServer()
+{
+
+}
+
 /**************************GENERAL SOCKET/SERVER ENDS*******************/
 
 
@@ -181,29 +291,6 @@ reader
 
 *****************************/
 
-// function to extract roll from body
-unsigned int imsServer::extractRoll(char * buffer, int size)
-{
-    // data in body is like:
-    // {"roll":"21149"}
-    int i = 0;
-    while(i < size && buffer[i] != '{') i++;
-
-    // reached the bracket before "roll"
-    i += 9; // now we have reached the first digit of roll
-    std::string roll;
-
-    // we don't know the length of roll so just read till " encountered
-    while(buffer[i] != '"') roll += buffer[i++];
-
-    return std::stoul(roll);
-}
-
-// function to extract all the data from the body and return it as a node
-Node imsServer::extractData(char * buff, int size)
-{
-
-}
 
 
 // function to handle search for a roll GET
@@ -218,8 +305,63 @@ void imsServer::handleGET(int sock)
     // all data is in buffer
     unsigned int roll = extractRoll(buffer, 4096);
 
-    Node * node = tree.search(roll);
+    std::ostringstream response;
 
+
+    // CS Begins
+    order.lock();
+    read.lock(); // to protect the readcount var
+    readcount++;
+    if(readcount == 1)
+    {
+        // first reader lock wrt so that no reader could come in
+        wrt.lock();
+    }
+    order.unlock(); // we have been served
+    read.unlock(); // so that other readers could enter
+
+    Node * temp = tree.search(roll);
+
+    if(!temp) // this roll DNE
+    {
+        // not need the critical section now
+
+        read.lock();
+        readcount--;
+        if(readcount == 0) // this is the last reader, needs to unlock wrt so that writers may come in
+        {
+            wrt.unlock();
+        }
+        read.unlock();
+
+        std::string body("{\"message\":\"Roll number does NOT exist\"}");
+
+        response << "HTTP/1.1 404 Not Found\nContent-Type: application/json\nContent-Length: " << body.size() << "\n\n" << body;
+    }
+    else // roll number was, need to send the data back in JSON in the hardcoded order only
+    {
+        // get the data stored in a temp variable, so that we don't have
+        // to reference the OG tree nodes. We will be able to unlock the tree earlier
+        Node node = *temp;
+
+        // can free tree now
+        read.lock();
+        readcount--;
+        if(readcount == 0)
+        {
+            wrt.unlock();
+        }
+        read.unlock();
+
+        // now just JSONify the data in node and then send it back
+        std::ostringstream body = JSONify(node);
+
+        response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
+    }
+
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+
+    close(sock);
 }
 
 
