@@ -1,6 +1,5 @@
 #include "server.h"
-#include <cstdlib>
-#include <string>
+#include <thread>
 
 /*******************************UTILITY FUNCTIONS*****************/
 
@@ -118,6 +117,10 @@ std::ostringstream imsServer::JSONify(Node & node)
 // retrieve the tree if stored on HDD
 imsServer::imsServer(std::string const & IP, short & port)
 {
+    // setting the atomic variables
+    running.store(true); // the server should be running
+    noOfThreads.store(0); // no threads currently
+
     // need to convert everything in network byte order
     sAddr.sin_family = AF_INET;
     sAddr.sin_port = htons(port);
@@ -203,7 +206,7 @@ void imsServer::startServer()
 
 
     // ACCEPTING NEW CONNECTIONS AND SERVING THEM
-    while(true)
+    while(running.load()) // atomic readin of this running value. stopServer makes this false, and hence no new connections get entertained
     {
         // accept function removes the first connection request from the pending queue of socketFD
         // saves the address of the caller client process in the struct pointed to by the second parameter
@@ -247,11 +250,41 @@ void imsServer::startServer()
     }
 }
 
-// destructor
+// function to stop the server
 // save the tree on hdd using tree-saver
-imsServer::~imsServer()
+// close all the threads
+void imsServer::stopServer()
 {
+    // make the running var false atomically
+    // so that no new connections are getting entertained now
+    running.store(false); // now the while(running) loop in startServer exits
 
+    // now no new threads for responses would be created
+    // but some threads may be accessing the tree or waiting on some mutex
+    // they will all execute and finish eventually
+    // and noOfThreads will become 0 eventually.
+    // so we can wait till noOfThreads becomes 0
+    // and then call the tree-saver
+
+    while(noOfThreads.load() > 0)
+    {
+        // there are still threads which are executing.
+        // so we need to wait but don't want a busy waiting solution.
+        // so we move this current thread to the end of running queue.
+        // other threads (which we want to close before moving forward),
+        // will now be scheduled.
+        std::this_thread::yield();
+    }
+
+    // all threads have finished
+    // can now save the tree
+    TreeSaver<Node> saver;
+    saver.save(tree.getRoot());
+
+    // the tree has been saved
+    // can close everything now and stop exec of program
+
+    close(socketFD);
 }
 
 /**************************GENERAL SOCKET/SERVER ENDS*******************/
@@ -296,6 +329,9 @@ reader
 // function to handle search for a roll GET
 void imsServer::handleGET(int sock)
 {
+    // one more thread
+    noOfThreads.fetch_add(1);
+
     // first need to read everything into a buff
     // first need to parse the roll out of the body
     // then search for it in critical section
@@ -362,12 +398,18 @@ void imsServer::handleGET(int sock)
     if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
 
     close(sock);
+
+    // one thread is exiting
+    noOfThreads.fetch_sub(1);
 }
 
 
 // function to handle adding a new record: POST
 void imsServer::handlePOST(int sock)
 {
+    // one more thread
+    noOfThreads.fetch_add(1);
+
     // reading all data first
     char buffer[4096] = {0};
     recv(sock, buffer, sizeof(buffer), 0);
@@ -393,12 +435,18 @@ void imsServer::handlePOST(int sock)
     if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
 
     close(sock);
+
+    // one less thread
+    noOfThreads.fetch_sub(1);
 }
 
 
 // function to handle updating an existing record
 void imsServer::handlePUT(int sock)
 {
+    // one more thread
+    noOfThreads.fetch_add(1);
+
     // call this only when this roll exists
 
     // reading all data first
@@ -425,11 +473,17 @@ void imsServer::handlePUT(int sock)
     if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
 
     close(sock);
+
+    //one less thread
+    noOfThreads.fetch_sub(1);
 }
 
 // functino to handle deleting a record: DELETE
 void imsServer::handleDELETE(int sock)
 {
+    // increment the number of threads atomically
+    noOfThreads.fetch_add(1); // atomic increment
+
     // first gett all the body data
     char buffer[4096] = {0};
     recv(sock,buffer, sizeof(buffer), 0);
@@ -476,6 +530,9 @@ void imsServer::handleDELETE(int sock)
     if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
 
     close(sock);
+
+    // decrement the number of threads
+    noOfThreads.fetch_sub(1);
 }
 
 

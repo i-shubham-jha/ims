@@ -12,6 +12,7 @@
 #include <thread>
 #include <mutex>
 #include <string.h>
+#include <atomic>
 
 
 /********************INTERFACE SPECIFICATION********************
@@ -77,12 +78,18 @@ class imsServer
     int readcount; // number of current readers reading the resource
     std::mutex order; // to fix starvation as in v3 of reader writer problem
 
+    // atomic vars to help in shutdown of server
+    // these vars (their data representation in MM) are the same as their base types
+    // just that the ops on them are atomic now (only which are supported by the hardware though)
+    std::atomic<bool> running; // the  makes this false so that while(running.fetch()) exits and new requests are NOT being served
+    std::atomic<unsigned int> noOfThreads; // number of threads which have been created
 public:
     // to init the sAddr struct and retrieve the tree saved onto HDD (if any)
     imsServer(std::string const & IP, short & port);
 
     void startServer(); // server starts listening and responding
 
-    // destructor
-    ~imsServer();
+
+    // function to close the server and save using treeSaver
+    void stopServer();
 };

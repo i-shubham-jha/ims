@@ -74,4 +74,7 @@ public:
     // function to get all the records as a vector
     // returns in increasing order of roll number
     std::vector<Node> getRecords();
+
+    // function to get the root pointer, to be used by TreeSaver
+    Node * getRoot();
 };

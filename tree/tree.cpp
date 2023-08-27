@@ -367,3 +367,9 @@ Node * Tree::deleteBST(Node * x)
         return deleteBST(temp); // as we need to return the address of the physically deleted node, which is now the earlier successor node
     }
 }
+
+// function to get the root pointer, to be used by TreeSaver
+Node * Tree::getRoot()
+{
+    return this->root;
+}
