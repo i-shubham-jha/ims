@@ -1,9 +1,13 @@
 
 
 #include <sys/stat.h>
+#include <ctime>
 inline void log(const std::string & str)
 {
-    std::cout << str << std::endl;
+    struct tm t;
+    time_t now = time(0);
+    char * tt = ctime(&now);
+    std::cout << "\n" << tt << str << std::endl;
 }
 
 template <typename T>

@@ -1,4 +1,11 @@
-
+#include <ctime>
+inline void log(const std::string & str)
+{
+    struct tm t;
+    time_t now = time(0);
+    char * tt = ctime(&now);
+    std::cout << "\n" << tt << str << std::endl;
+}
 template <typename T>
 T * TreeRetriever<T>::retrieve()
 {
@@ -7,7 +14,7 @@ T * TreeRetriever<T>::retrieve()
 
     if(nodesFile.fail() || childrenFile.fail())
     {
-        puts("Error in opening files. May not exist, access denied, etc");
+        log("Error in opening files. May not exist, access denied, etc");
         return NULL;
     }
 
