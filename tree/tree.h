@@ -76,5 +76,5 @@ public:
     std::vector<Node> getRecords();
 
     // function to get the root pointer, to be used by TreeSaver
-    Node * getRoot();
+    Node * getRoot() const;
 };

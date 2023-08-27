@@ -1,4 +1,5 @@
 #include "server.h"
+#include <netinet/in.h>
 #include <thread>
 
 /*******************************UTILITY FUNCTIONS*****************/
@@ -133,6 +134,8 @@ imsServer::imsServer(std::string const & IP, short & port)
     sAddr.sin_addr.s_addr = inet_addr(IP.c_str());
     sAddrLen = sizeof(sAddr);
 
+    log("init of sockaddr_in done");
+
     // inits done
 
     // CREATING A NEW SOCKET
@@ -156,13 +159,15 @@ imsServer::imsServer(std::string const & IP, short & port)
     // BINDING THE SOCKET
     if(bind(socketFD,(sockaddr *) &sAddr, sAddrLen) == -1)
     {
-        log("Failed to bind socket\nExiting...");
+        std::ostringstream str;
+        str << "Failure in binding socket to port " << ntohs(sAddr.sin_port);
+        log(str.str() + "\nExiting...");
         exit(1);
     }
     else
     {
         std::ostringstream str;
-        str << "Socket bound to port: " << ntohs(sAddr.sin_port);
+        str << "Socket successfully bound to port " << ntohs(sAddr.sin_port);
         log(str.str());
     }
     // BINDING DONE
@@ -173,6 +178,11 @@ imsServer::imsServer(std::string const & IP, short & port)
 
     // if the tree is NOT Saved then retriever would return NULL anyways
     tree.loadRetrievedTree(retriever.retrieve());
+
+    if(tree.getRoot())// tree existed on HDD and was retrieved
+    {
+        log("Saved tree has been retrieved");
+    }
 }
 
 
@@ -205,7 +215,9 @@ void imsServer::startServer()
     }
     else
     {
-        log("Listening has started");
+        std::ostringstream str;
+        str << ntohs(sAddr.sin_port);
+        log("Server started listening on port " + str.str());
     }
     // LISTENING HAS STARTED
 
@@ -217,7 +229,13 @@ void imsServer::startServer()
         // saves the address of the caller client process in the struct pointed to by the second parameter
         // if second and third params are NULL, then the caller's address are Not stored anywhere
         // allocates and returns a new socket with the same type as socketFD
-        int newSocket = accept(socketFD, NULL, NULL);
+        sockaddr_in temp;
+        socklen_t len = sizeof(temp);
+        int newSocket = accept(socketFD,(sockaddr *) &temp, &len);
+
+        std::ostringstream str;
+        str << "Accepted a new connection from " << ntohl(temp.sin_addr.s_addr) << ":" << ntohs(temp.sin_port);
+        log(str.str());
 
         std::string method = getMethod(newSocket); // getting the method associated
 
@@ -260,9 +278,12 @@ void imsServer::startServer()
 // close all the threads
 void imsServer::stopServer()
 {
+    log("called stopServer");
     // make the running var false atomically
     // so that no new connections are getting entertained now
     running.store(false); // now the while(running) loop in startServer exits
+
+    log("Stopped accepting new requests");
 
     // now no new threads for responses would be created
     // but some threads may be accessing the tree or waiting on some mutex
@@ -281,11 +302,13 @@ void imsServer::stopServer()
         std::this_thread::yield();
     }
 
+    log("all threads accessing the tree have stopped");
+
     // all threads have finished
     // can now save the tree
     TreeSaver<Node> saver;
     saver.save(tree.getRoot());
-
+    log("saved the tree onto HDD");
     // the tree has been saved
     // can close everything now and stop exec of program
 

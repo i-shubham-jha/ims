@@ -369,7 +369,7 @@ Node * Tree::deleteBST(Node * x)
 }
 
 // function to get the root pointer, to be used by TreeSaver
-Node * Tree::getRoot()
+Node * Tree::getRoot() const
 {
     return this->root;
 }
