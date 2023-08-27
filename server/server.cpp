@@ -6,7 +6,10 @@
 // logging function
 void imsServer::log(std::string const & str)
 {
-    std::cout << str << std::endl;
+    struct tm t;
+    time_t now = time(0);
+    char * tt = ctime(&now);
+    std::cout << "\n" << tt << str << std::endl;
 }
 
 // function to extract roll from body
@@ -120,6 +123,8 @@ imsServer::imsServer(std::string const & IP, short & port)
     // setting the atomic variables
     running.store(true); // the server should be running
     noOfThreads.store(0); // no threads currently
+
+    log("init of atomic vars done");
 
     // need to convert everything in network byte order
     sAddr.sin_family = AF_INET;

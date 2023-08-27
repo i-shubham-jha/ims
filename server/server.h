@@ -13,6 +13,7 @@
 #include <mutex>
 #include <string.h>
 #include <atomic>
+#include <ctime>
 
 
 /********************INTERFACE SPECIFICATION********************
