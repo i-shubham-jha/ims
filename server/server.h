@@ -55,7 +55,7 @@ class imsServer
     int sAddrLen; // length of sAddr, to be used in accept function
 
     // logging function
-    void log(std::string const & str);
+    void log3(std::string const & str);
 
     // function to retrieve the HTTP method from the client connection's header
     std::string getMethod(int sock);

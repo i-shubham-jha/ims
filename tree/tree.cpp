@@ -174,8 +174,7 @@ Node * Tree::insertBST(unsigned int & roll, std::string & name, std::string & fa
             tempParent = temp;
             temp = temp->left;
         }
-
-        if(roll > temp->roll)
+        else if(roll > temp->roll)
         {
             tempParent = temp;
             temp = temp->right;

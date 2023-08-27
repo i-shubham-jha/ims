@@ -2,12 +2,11 @@
 #include <netinet/in.h>
 #include <thread>
 
+
 /*******************************UTILITY FUNCTIONS*****************/
 
-// logging function
-void imsServer::log(std::string const & str)
+void imsServer::log3(const std::string & str)
 {
-    struct tm t;
     time_t now = time(0);
     char * tt = ctime(&now);
     std::cout << "\n" << tt << str << std::endl;
@@ -125,7 +124,7 @@ imsServer::imsServer(std::string const & IP, short & port)
     running.store(true); // the server should be running
     noOfThreads.store(0); // no threads currently
 
-    log("init of atomic vars done");
+    log3("init of atomic vars done");
 
     // need to convert everything in network byte order
     sAddr.sin_family = AF_INET;
@@ -134,7 +133,7 @@ imsServer::imsServer(std::string const & IP, short & port)
     sAddr.sin_addr.s_addr = inet_addr(IP.c_str());
     sAddrLen = sizeof(sAddr);
 
-    log("init of sockaddr_in done");
+    log3("init of sockaddr_in done");
 
     // inits done
 
@@ -144,14 +143,14 @@ imsServer::imsServer(std::string const & IP, short & port)
 
     if(socketFD == -1)
     {
-        log("Failed to create new socket\nExiting...");
+        log3("Failed to create new socket\nExiting...");
         exit(1);
     }
     else
     {
         std::ostringstream str;
         str << "Created socket: " << socketFD;
-        log(str.str());
+        log3(str.str());
     }
     // SOCKET CREATION DONE
 
@@ -161,14 +160,14 @@ imsServer::imsServer(std::string const & IP, short & port)
     {
         std::ostringstream str;
         str << "Failure in binding socket to port " << ntohs(sAddr.sin_port);
-        log(str.str() + "\nExiting...");
+        log3(str.str() + "\nExiting...");
         exit(1);
     }
     else
     {
         std::ostringstream str;
         str << "Socket successfully bound to port " << ntohs(sAddr.sin_port);
-        log(str.str());
+        log3(str.str());
     }
     // BINDING DONE
 
@@ -181,7 +180,7 @@ imsServer::imsServer(std::string const & IP, short & port)
 
     if(tree.getRoot())// tree existed on HDD and was retrieved
     {
-        log("Saved tree has been retrieved");
+        log3("Saved tree has been retrieved");
     }
 }
 
@@ -210,14 +209,14 @@ void imsServer::startServer()
     // STARTING LISTENING ON SOCKET
     if(listen(socketFD, SOMAXCONN)) // SOMAXCONN is the max number of requests in queue
     {
-        log("Failed to start listening\nExiting...");
+        log3("Failed to start listening\nExiting...");
         exit(1);
     }
     else
     {
         std::ostringstream str;
         str << ntohs(sAddr.sin_port);
-        log("Server started listening on port " + str.str());
+        log3("Server started listening on port " + str.str());
     }
     // LISTENING HAS STARTED
 
@@ -234,8 +233,8 @@ void imsServer::startServer()
         int newSocket = accept(socketFD,(sockaddr *) &temp, &len);
 
         std::ostringstream str;
-        str << "Accepted a new connection from " << ntohl(temp.sin_addr.s_addr) << ":" << ntohs(temp.sin_port);
-        log(str.str());
+        str << "Accepted a new connection from " << inet_ntoa(temp.sin_addr) << ":" << ntohs(temp.sin_port);
+        log3(str.str());
 
         std::string method = getMethod(newSocket); // getting the method associated
 
@@ -278,12 +277,12 @@ void imsServer::startServer()
 // close all the threads
 void imsServer::stopServer()
 {
-    log("called stopServer");
+    log3("called stopServer");
     // make the running var false atomically
     // so that no new connections are getting entertained now
     running.store(false); // now the while(running) loop in startServer exits
 
-    log("Stopped accepting new requests");
+    log3("Stopped accepting new requests");
 
     // now no new threads for responses would be created
     // but some threads may be accessing the tree or waiting on some mutex
@@ -302,13 +301,13 @@ void imsServer::stopServer()
         std::this_thread::yield();
     }
 
-    log("all threads accessing the tree have stopped");
+    log3("all threads accessing the tree have stopped");
 
     // all threads have finished
     // can now save the tree
     TreeSaver<Node> saver;
     saver.save(tree.getRoot());
-    log("saved the tree onto HDD");
+    log3("saved the tree (if any) onto HDD");
     // the tree has been saved
     // can close everything now and stop exec of program
 
@@ -423,7 +422,7 @@ void imsServer::handleGET(int sock)
         response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
     }
 
-    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log3("error in sending response of DELETE");
 
     close(sock);
 
@@ -460,7 +459,7 @@ void imsServer::handlePOST(int sock)
 
     response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
 
-    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log3("error in sending response of DELETE");
 
     close(sock);
 
@@ -498,7 +497,7 @@ void imsServer::handlePUT(int sock)
 
     response << "HTTP/1.1 200 OK\nContent-Type: application/json\nContent-Length: " << body.str().size() << "\n\n" << body.str();
 
-    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log3("error in sending response of DELETE");
 
     close(sock);
 
@@ -555,7 +554,7 @@ void imsServer::handleDELETE(int sock)
     // CS ended already in if..else
 
     // sending back the response
-    if(write(sock, response.str().c_str(), response.str().size()) == -1) log("error in sending response of DELETE");
+    if(write(sock, response.str().c_str(), response.str().size()) == -1) log3("error in sending response of DELETE");
 
     close(sock);
 
